@@ -69,6 +69,12 @@ def coord_map(fn):
     elif fn.type_name == 'Deconvolution':
         axis, stride, ks, pad = conv_params(fn)
         return axis, stride, (ks - 1) / 2 - pad
+    #### Add an exceptional case for concat layer
+    elif fn.type_name == 'Concat' and ( fn.params.get('axis', True) or fn.params['axis'] <= 1):
+        return None, 1, 0
+    #### Add an exceptional case for python layer[dirty hack, not applicable to all python layer]
+    elif fn.type_name == 'Python':
+        return None, 1, 0
     elif fn.type_name in PASS_THROUGH_LAYERS:
         return None, 1, 0
     elif fn.type_name == 'Crop':
