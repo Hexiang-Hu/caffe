@@ -403,10 +403,20 @@ message LayerParameter {
   optional ThresholdParameter threshold_param = 128;
   optional TileParameter tile_param = 138;
   optional WindowDataParameter window_data_param = 129;
+  optional LabelContextAggregatorParameter label_context_aggregator_param = 150;
 
   optional ROIPoolingParameter roi_pooling_param = 8266711;
   optional SmoothL1LossParameter smooth_l1_loss_param = 8266712;
 }
+
+// Message that stores parameters used by LabelContextAggregatorLayer
+message LabelContextAggregatorParameter {
+  optional uint32 window = 1 [default = 0];
+  optional uint32 pad = 2 [default = 0];
+  optional uint32 num_classes = 3 [default = 0];
+  optional float down_factor = 4 [default = 1];
+}
+
 
 // Message that stores parameters used by ROIPoolingLayer
 message ROIPoolingParameter {
