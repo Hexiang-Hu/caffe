@@ -71,9 +71,9 @@ class BatchNormLayer : public Layer<Dtype> {
 
   // extra temporarary variables is used to carry out sums/broadcasting
   // using BLAS
-  Blob<Dtype> batch_sum_multiplier_;
-  Blob<Dtype> num_by_chans_;
-  Blob<Dtype> spatial_sum_multiplier_;
+  static Blob<Dtype> batch_sum_multiplier_;
+  static Blob<Dtype> num_by_chans_;
+  static Blob<Dtype> spatial_sum_multiplier_;
 };
 
 }  // namespace caffe

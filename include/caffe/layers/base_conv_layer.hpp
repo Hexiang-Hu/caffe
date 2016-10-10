@@ -166,7 +166,7 @@ class BaseConvolutionLayer : public Layer<Dtype> {
   int output_offset_;
 
   static Blob<Dtype> col_buffer_;
-  Blob<Dtype> bias_multiplier_;
+  static Blob<Dtype> bias_multiplier_;
 };
 
 }  // namespace caffe

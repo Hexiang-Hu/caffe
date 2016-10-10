@@ -7,6 +7,15 @@
 namespace caffe {
 
 template <typename Dtype>
+Blob<Dtype> BatchNormLayer<Dtype>::batch_sum_multiplier_;
+
+template <typename Dtype>
+Blob<Dtype> BatchNormLayer<Dtype>::num_by_chans_;
+
+template <typename Dtype>
+Blob<Dtype> BatchNormLayer<Dtype>::spatial_sum_multiplier_;
+
+template <typename Dtype>
 void BatchNormLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bottom,
       const vector<Blob<Dtype>*>& top) {
   BatchNormParameter param = this->layer_param_.batch_norm_param();
