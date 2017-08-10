@@ -12,7 +12,7 @@ void FocalLossLayer<Dtype>::LayerSetUp(
     const vector<Blob<Dtype>*>& bottom, const vector<Blob<Dtype>*>& top) {
   LossLayer<Dtype>::LayerSetUp(bottom, top);
   LayerParameter softmax_param(this->layer_param_);
-  softmax_param.set_type("Focal");
+  softmax_param.set_type("Softmax");
   softmax_layer_ = LayerRegistry<Dtype>::CreateLayer(softmax_param);
   softmax_bottom_vec_.clear();
   softmax_bottom_vec_.push_back(bottom[0]);
@@ -104,7 +104,7 @@ void FocalLossLayer<Dtype>::Forward_cpu(
       DCHECK_GE(label_value, 0);
       DCHECK_LT(label_value, prob_.shape(softmax_axis_));
       loss -= log(std::max(prob_data[i * dim + label_value * inner_num_ + j],
-                           Dtype(FLT_MIN))) * prob_data[i * dim + label_value * inner_num_ + j];
+                           Dtype(FLT_MIN))) * ( 1 - prob_data[i * dim + label_value * inner_num_ + j] );
       ++count;
     }
   }
@@ -121,33 +121,7 @@ void FocalLossLayer<Dtype>::Backward_cpu(const vector<Blob<Dtype>*>& top,
     LOG(FATAL) << this->type()
                << " Layer cannot backpropagate to label inputs.";
   }
-  if (propagate_down[0]) {
-    Dtype* bottom_diff = bottom[0]->mutable_cpu_diff();
-    const Dtype* prob_data = prob_.cpu_data();
-    caffe_copy(prob_.count(), prob_data, bottom_diff);
-    const Dtype* label = bottom[1]->cpu_data();
-    int dim = prob_.count() / outer_num_;
-    int count = 0;
-    for (int i = 0; i < outer_num_; ++i) {
-      for (int j = 0; j < inner_num_; ++j) {
-        const int label_value = static_cast<int>(label[i * inner_num_ + j]);
-        if (has_ignore_label_ && label_value == ignore_label_) {
-          for (int c = 0; c < bottom[0]->shape(softmax_axis_); ++c) {
-            bottom_diff[i * dim + c * inner_num_ + j] = 0;
-          }
-        } else {
-          bottom_diff[i * dim + label_value * inner_num_ + j] -= 1;
-          bottom_diff[i * dim + label_value * inner_num_ + j] *= (1 - prob_data[i * dim + label_value * inner_num_ + j]);
-          bottom_diff[i * dim + label_value * inner_num_ + j] += log(std::max(prob_data[i * dim + label_value * inner_num_ + j], Dtype(FLT_MIN)));
-          ++count;
-        }
-      }
-    }
-    // Scale gradient
-    Dtype loss_weight = top[0]->cpu_diff()[0] /
-                        get_normalizer(normalization_, count);
-    caffe_scal(prob_.count(), loss_weight, bottom_diff);
-  }
+  NOT_IMPLEMENTED;
 }
 #ifdef CPU_ONLY
 STUB_GPU(FocalLossLayer);

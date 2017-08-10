@@ -65,8 +65,8 @@ void FocalLossLayer<Dtype>::Forward_gpu(
 
 template <typename Dtype>
 __global__ void FocalLossBackwardGPU(const int nthreads, const Dtype* top,
-          const Dtype* label, Dtype* bottom_diff, const Dtype* prob_data, const int num, const int dim,
-          const int spatial_dim, const bool has_ignore_label_,
+          const Dtype* label, Dtype* bottom_diff, const Dtype* prob_data,
+          const int num, const int dim, const int spatial_dim, const bool has_ignore_label_,
           const int ignore_label_, Dtype* counts) {
   const int channels = dim / spatial_dim;
 
@@ -81,9 +81,18 @@ __global__ void FocalLossBackwardGPU(const int nthreads, const Dtype* top,
       }
       counts[index] = 0;
     } else {
-      bottom_diff[n * dim + label_value * spatial_dim + s] -= 1;
+      // common_term = [ P_t * log(P_t) - (1 - P_t) ]
+      bottom_diff[n * dim + label_value * spatial_dim + s] = log(max(prob_data[n * dim + label_value * spatial_dim + s], Dtype(FLT_MIN)))
+                                                              * prob_data[n * dim + label_value * spatial_dim + s];
+      bottom_diff[n * dim + label_value * spatial_dim + s] -= (1 - prob_data[n * dim + label_value * spatial_dim + s]);
+      // when k != t, diff = P_k * common_term
+      for (int c = 0; c < channels; ++c){
+        if (c == label_value) continue;
+        bottom_diff[n * dim + c * spatial_dim + s] *= - bottom_diff[n * dim + label_value * spatial_dim + s];
+      }
+
+      // when k = t, diff = P_k * ( 1 - P_t) * common_term
       bottom_diff[n * dim + label_value * spatial_dim + s] *= (1 - prob_data[n * dim + label_value * spatial_dim + s]);
-      bottom_diff[n * dim + label_value * spatial_dim + s] += log(max(prob_data[n * dim + label_value * spatial_dim + s], Dtype(FLT_MIN)));
       counts[index] = 1;
     }
   }
@@ -102,6 +111,8 @@ void FocalLossLayer<Dtype>::Backward_gpu(const vector<Blob<Dtype>*>& top,
     const Dtype* top_data = top[0]->gpu_data();
     caffe_gpu_memcpy(prob_.count() * sizeof(Dtype), prob_data, bottom_diff);
     const Dtype* label = bottom[1]->gpu_data();
+    // outer_num_ = N, inner_num_ = spatial_dim, dim = spatial_dim * class_num
+    // nthreads   = loop over batch num and each spatial dim
     const int dim = prob_.count() / outer_num_;
     const int nthreads = outer_num_ * inner_num_;
     // Since this memory is never used for anything else,
@@ -121,6 +132,7 @@ void FocalLossLayer<Dtype>::Backward_gpu(const vector<Blob<Dtype>*>& top,
     }
     const Dtype loss_weight = top[0]->cpu_diff()[0] /
                               get_normalizer(normalization_, valid_count);
+
     caffe_gpu_scal(prob_.count(), loss_weight , bottom_diff);
   }
 }
